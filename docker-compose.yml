@@ -1,0 +1,44 @@
+version: '3.3'
+
+services:
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx.dockerfile
+    container_name: obalor-nginx
+    volumes:
+      - ./:/var/www/obalor
+      - ./docker/ssl:/etc/nginx/ssl
+    ports:
+      - 127.0.0.1:443:443
+      - 127.0.0.1:8080:80
+    links:
+      - php
+
+  php:
+    build:
+      context: .
+      dockerfile: docker/php-fpm.dockerfile
+    container_name: obalor-php
+    volumes:
+      - ./:/var/www/obalor
+      - ./docker/php-ini:/usr/local/etc/php/custom.d
+    environment:
+      PHP_INI_SCAN_DIR: "/usr/local/etc/php/custom.d:/usr/local/etc/php/conf.d"
+    links:
+      - pg
+
+  pg:
+    build:
+      context: .
+      dockerfile: docker/pg.dockerfile
+    container_name: obalor-pg
+    volumes:
+      - ./Makefile:/Makefile
+    ports:
+      - 127.0.0.1:53307:5432
+    environment:
+      - POSTGRES_DB=obalor_db
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
