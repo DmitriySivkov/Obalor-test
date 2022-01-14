@@ -8,6 +8,7 @@ use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Foundation\Bus\PendingDispatch;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class ImportCustomerService
@@ -21,18 +22,17 @@ class ImportCustomerService
     public function import()
     {
         $raw = Storage::disk('local')->get('import/' . self::FILENAME);
-        $data = $this->matchFields($raw);
+
+        $data = collect($this->matchFields($raw));
+        $notExistingCustomers = $data->filter(
+            fn($item) => !in_array($item['email'], Customer::pluck('email')->toArray())
+        );
 
         $withErrors = [];
-        foreach ($data as $item) {
-            $customer = new Customer();
-            if ($customer::where('email', $item['email'])->first())
-                continue;
-
+        foreach ($notExistingCustomers as $item) {
             $item = collect($item)->except(['id'])->toArray();
             try {
-                $customer->fill($item);
-                $customer->save();
+                (new Customer($item))->save();
             } catch (\Exception $e) {
                 $item['error'] =  $e->getMessage();
                 $withErrors[] = $item;

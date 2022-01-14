@@ -23,10 +23,8 @@ class ImportCountriesService
         $data = json_decode($raw, true);
         foreach ($data as $item) {
             $item = collect($item)->except(['id'])->toArray();
-            $country = new Country();
-            $country->fill($item);
             try {
-                $country->save();
+                (new Country($item))->save();
             } catch (\Exception $e) {
                 Log::info($e->getMessage());
             }
